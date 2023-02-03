@@ -25,14 +25,6 @@ class Camara:
     specification apis.
 
     Currently only "QoD" is supported by using the `qod` field.
-
-    Usage:
-
-    ```
-    Camara(id, secret).qod.create_session("QOD_E")
-    ```
-    This will first create a new authentication token using client id and client secret, and then use this to create
-    a new qod session with priority of _QOD_E_.
     """
 
     def __init__(
@@ -158,12 +150,12 @@ class QualityOnDemand:
     Specific CAMARA API: Quality on Demand
 
     This set of rest operations control the quality on demand aspects of a network channel. It prioritizes network
-    traffic based on a specific qod priority class.
+    traffic based on a specific qod profile.
     """
 
     class Profile(Enum):
         """
-        Enumeration holding all valid values for QoD profiles
+        Enumeration holding all valid values for QoD profiles.
         """
         E = "QOD_E"
         S = "QOD_S"
