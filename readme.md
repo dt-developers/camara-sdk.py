@@ -31,7 +31,7 @@ on your favorite venv / python installation.
 Usage
 -----
 
-To run the cli, use `python3 cli.ph` or directly execute the script like `./cli.py`. Once the cli is started typing `help` will show the list of available _verbs_. Entering those will change configuration or actually call the apis.
+To run the cli, use `python3 cli.py` or directly execute the script like `./cli.py`. Once the cli is started typing `help` will show the list of available _verbs_. Entering those will change configuration or actually call the apis.
 
 Please set `CAMARA_CLIENT_ID` and `CAMARA_CLIENT_SECRET` environment variables to authenticate towards the Telekom Camara API gateway. Otherwise you'll get asked at startup of the _cli_.
 
