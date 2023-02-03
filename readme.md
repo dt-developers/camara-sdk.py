@@ -12,10 +12,10 @@ once it expires. Additonally this CLI keeps track of the last session created, a
 Functionalities
 ---------------
 
-[x] Create and renew authentication tokens
-[x] Create, delete quaality on demand sessions
-[x] Separation of SDK and CLI: Use [camara.py](camara.py) as your interface to the APIs
-[ ] Compeling graphical output of time remaining
+- [x] Create and renew authentication tokens
+- [x] Create, delete quaality on demand sessions
+- [x] Separation of SDK and CLI: Use [camara.py](camara.py) as your interface to the APIs
+- [ ] Compeling graphical output of time remaining
 
 Requirements
 ------------
