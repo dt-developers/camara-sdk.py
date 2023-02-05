@@ -10,7 +10,6 @@ authors = [
   { name="T Developers", email="developers@telekom.de" },
   { name="Mario Bodemann", email="mario.bodemann@telekom.de" },
 ]
-description = "CAMARA SDK Draft - QoD only"
 readme = "readme.md"
 requires-python = ">=3.7"
 classifiers = [
