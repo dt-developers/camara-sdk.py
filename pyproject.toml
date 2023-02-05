@@ -6,8 +6,8 @@ build-backend = "hatchling.build"
 name = "camara_sdk"
 version = "0.0.1"
 authors = [
-  { name="T Developers", email="developers@telekom.com" },
-  { name="Mario Bodemann", email="mario.bodemann@gmail.com" },
+  { name="T Developers", email="developers@telekom.de" },
+  { name="Mario Bodemann", email="mario.bodemann@telekom.de" },
 ]
 description = "CAMARA SDK Draft - QoD only"
 readme = "readme.md"
@@ -19,5 +19,5 @@ classifiers = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/dt-developers/camara-sdk"
-"Bug Tracket" = "https://github.com/dt-developers/camara-sdk/issues"
+"Homepage" = "https://github.com/dt-developers/camara-sdk.py"
+"Bug Tracket" = "https://github.com/dt-developers/camara-sdk.py/issues"
