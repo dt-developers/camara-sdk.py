@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "camara_sdk"
+description = "Enable Seamless Access to Telco Network Capabilities."
+version = "0.0.1"
+authors = [
+  { name="T Developers", email="developers@telekom.de" },
+  { name="Mario Bodemann", email="mario.bodemann@telekom.de" },
+]
+readme = "readme.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+  "requests>=2.28.1",
+]
+[project.urls]
+"Homepage" = "https://github.com/dt-developers/camara-sdk.py"
+"Bug Tracket" = "https://github.com/dt-developers/camara-sdk.py/issues"

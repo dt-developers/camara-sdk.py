@@ -231,6 +231,3 @@ if __name__ == "__main__":
         client_secret = input(f"No '{CAMARA_CLIENT_SECRET_ENV}' environment variable set. Please specify by hand: ")
 
     menu(client_id, client_secret)
-else:
-    # Invocation of cli module is discouraged
-    print("Error: Please execute as '__main__', or import 'camara'.")

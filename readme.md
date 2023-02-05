@@ -1,3 +1,5 @@
+[![Python Package Build](https://github.com/dt-developers/camara-sdk.py/actions/workflows/main.yml/badge.svg)](https://github.com/dt-developers/camara-sdk.py/actions/workflows/main.yml)
+
 CAMARA CLI - in python
 ======================
 
