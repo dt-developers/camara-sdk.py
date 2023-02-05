@@ -1,34 +1,42 @@
 [![Python Package Build](https://github.com/dt-developers/camara-sdk.py/actions/workflows/main.yml/badge.svg)](https://github.com/dt-developers/camara-sdk.py/actions/workflows/main.yml)
 
-CAMARA CLI - in python
-======================
+Python CAMARA SDK 
+=================
 
-Call Camara APIs (currently only [Quality on Demand](https://github.com/camaraproject/QualityOnDemand/) is supported) through an easy to use CLI (command line interface).
+Call Camara APIs (currently only [Quality on Demand](https://github.com/camaraproject/QualityOnDemand/) is supported) through an easy to use CLI (command line interface) and an initial SDK.
+
+Usage
+-----
+
+Install the SDK by calling `pip install camara_sdk`. Now you can import it and use it like so:
+
+```
+import camara
+```
+
+In order to create your first qod session, you need to create a client
+
+```
+client = camara.Camara('id', 'secret')
+```
+
+specifying the *id* and *secret* given when signing up for a subscription.
+
+Now the `client` can be used for creating a new *qod* session:
+
+```
+client.qod.create_session(
+  qos = camara.QualityOnDemand.Profile.E,
+  from_ip = "127.0.0.1"
+)
+```
+
+This will trigger a new token creation request (since the sdk notices, that there was no token created before, it does the same when the token expires) and then creates a new quality on demand session for 10 seconds (unless a different value was given with `duration = 100`).
 
 CLI
----
+===
 
-This CLI is written in python and makes it easy to create authorization tokens, and keeping track of the length of said tokens. It automatically renews a token, 
-once it expires. Additonally this CLI keeps track of the last session created, and informs when this session needs to be extended.
-
-Functionalities
----------------
-
-- [x] Create and renew authentication tokens
-- [x] Create, delete quaality on demand sessions
-- [x] Separation of SDK and CLI: Use [camara.py](camara.py) as your interface to the APIs
-- [ ] Compeling graphical output of time remaining
-
-Requirements
-------------
-
-This library / cli only relies on the requests library. To install it call
-
-```
-pip install requests
-```
-
-on your favorite venv / python installation.
+For simple use, a CLI was created, it makes it easy to create authorization tokens, and keeping track of the length of said tokens. It automatically renews a token, once it expires. Additonally this CLI keeps track of the last session created, and informs when this session needs to be extended.
 
 Usage
 -----
@@ -41,7 +49,22 @@ Using the `qod e` _verb_ will call the qod session creation operation with the p
 
 Using the _info_ verb will present the times left on the last session and the token.
 
+Dependencies
+============
+
+This library / cli only relies on the *requests* library.
+
+
+Next Steps
+==========
+
+- [ ] Add common files (CONTRIBUTORS, ISSUE_TEMPLATE, ...)
+- [ ] Fancyfy this readme (all the colors, all the logos ...)
+- [ ] Push package out of testpypi
+- [ ] Release more modules (not only QoD)
+
+
 Contact
--------
+=======
 
 In case of any questions please contact developers@telekom.de. For issues with the camara qod specification, please file an issue [here](https://github.com/camaraproject/QualityOnDemand/issues/new).
