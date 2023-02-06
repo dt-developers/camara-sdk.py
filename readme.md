@@ -52,7 +52,7 @@ Using the _info_ verb will present the times left on the last session and the to
 Dependencies
 ============
 
-This library / cli only relies on the *requests* library.
+This library uses python 3.10 (due [union types](https://peps.python.org/pep-0604/)) and otherwise only depends on the *requests* library.
 
 
 Next Steps
