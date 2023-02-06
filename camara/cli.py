@@ -5,7 +5,8 @@ This is the entry point for the CAMARA APIs.
 It provides a cli when called as a script, and calls apis specified in [CAMARA](https://github.com/camraproject).
 """
 import os
-from camara import *
+from camara import Camara
+from camara import QualityOnDemand
 
 # Set to 'None' to disable color. Otherwise, use an ANSI escape color code
 # number from here: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -63,7 +64,7 @@ def menu(client_id, client_secret):
     def user_help():
         """Print help for all verbs."""
 
-        print(f"Available verbs:")
+        print("Available verbs:")
         for key in verbs.keys():
             documentation = verbs[key].__doc__
             if documentation:
@@ -79,7 +80,7 @@ def menu(client_id, client_secret):
         try:
             print(f"access_token: {camara.get_access_token()}")
         except Exception:
-            print(f"no access_token set")
+            print("no access_token set")
 
         print(f"client_id: {camara.client_id}")
         print(f"client_secret: {camara.client_secret}")

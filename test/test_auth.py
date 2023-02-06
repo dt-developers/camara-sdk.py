@@ -1,12 +1,17 @@
-import unittest
 import camara
 
+
 def test_no_reauth():
-    assert 'Not Implemented' == True
+    _ = camara.Camara(
+        client_id='id',
+        client_secret='secret',
+    )
+    assert not 'implemented'
+
 
 def test_auth_if_expired():
-    assert 'Not Implemented' == True
+    assert not 'implemented'
+
 
 def test_auth_if_notset():
-    assert 'Not Implemented' == True
-
+    assert not 'implemented'
