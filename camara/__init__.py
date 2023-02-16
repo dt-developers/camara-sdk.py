@@ -157,10 +157,10 @@ class QualityOnDemand:
         """
         Enumeration holding all valid values for QoD profiles.
         """
-        E = "QOD_E"
-        S = "QOD_S"
-        M = "QOD_M"
-        L = "QOD_L"
+        E = "QOS_E"
+        S = "QOS_S"
+        M = "QOS_M"
+        L = "QOS_L"
 
     def __init__(self, token_provider):
         self.token_provider = token_provider
