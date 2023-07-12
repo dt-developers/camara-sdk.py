@@ -5,17 +5,21 @@ This is the entry point for the CAMARA APIs.
 It provides a cli when called as a script, and calls apis specified in [CAMARA](https://github.com/camraproject).
 """
 import os
-from camara import Camara
-from camara import QualityOnDemand
+import json
+
+import camara
+import camara.Config
+from camara import Camara, QualityOnDemand
+from camara.EndpointConfig import EndpointConfig
 
 # Set to 'None' to disable color. Otherwise, use an ANSI escape color code
 # number from here: https://en.wikipedia.org/wiki/ANSI_escape_code
-INFO_COLOR = 32
-ERROR_COLOR = 41
-COLOR = INFO_COLOR
+COLOR_INFO = 32
+COLOR_ERROR = 41
+COLOR_WARN = 43
 
 
-def colorize(text, color=COLOR):
+def colorize(text, color=COLOR_INFO):
     """
     Take the text and colorize it with one color.
 
@@ -31,42 +35,79 @@ def colorize(text, color=COLOR):
         return text
 
 
-# Prompt for the user: Whenever this CLI asks the user something, this prompt appears
-PROMPT = f"{colorize('CAMARA')}> "
-
-# Client details for authentication. Please ask your CAMARA representative for these values.
-CAMARA_CLIENT_SECRET_ENV = 'CAMARA_CLIENT_SECRET'
-CAMARA_CLIENT_ID_ENV = 'CAMARA_CLIENT_ID'
+def variables(obj):
+    return list(filter(lambda x: not x.startswith("__") and not callable(x), dir(obj)))
 
 
-def menu(client_id, client_secret):
+class Menu:
     """
-    Creates a nice menu for the Command Line Interface.
+    Creates a menu for the Command Line Interface.
 
-    :param client_id: which id to be used to authenticate
-    :param client_secret:  the secret to be used for authentication
+    :param config: camara configuration loaded from specified file
     :return: nothing - on return the script ends
     """
 
-    class Config:
+    # Prompt for the user: Whenever this CLI asks the user something, this prompt appears
+    PROMPT = f"{colorize('CAMARA')}> "
+
+    def __init__(self, config):
+        self.config = config
+        self.config.to_ip = "0.0.0.0/8"
+        self.config.from_ip = "127.0.0.1"
+        self.config.duration = 10
+        self.config.latitude = None
+        self.config.longitude = None
+        self.config.accuracy = None
+
+        self.verbs = {
+            'help': self.user_help,
+            'exit': self.user_exit,
+            'from': self.user_set_from,
+            'time': self.user_time,
+            'info': self.user_info,
+            'con': self.user_connectivity,
+            'loc': self.user_location,
+            'loc lat': self.user_location_set_latitude,
+            'loc lon': self.user_location_set_longitude,
+            'loc acc': self.user_location_set_accuracy,
+            'qod delete': self.user_delete_session,
+            'qod e': self.create_session_creation_function(QualityOnDemand.Profile.E),
+            'qod s': self.create_session_creation_function(QualityOnDemand.Profile.S),
+            'qod m': self.create_session_creation_function(QualityOnDemand.Profile.M),
+            'qod l': self.create_session_creation_function(QualityOnDemand.Profile.L),
+            'qod to': self.user_qod_set_to,
+            'qod duration': self.user_qod_set_duration,
+        }
+
+        self.client = Camara(config)
+
+    def start(self):
         """
-        Configuration Abstraction
-
-        Used internally to store the configuration values for the menu. Think of ip addresses and other values needed
-        to execute apis.
+        Start the menu, interacting with the user.
         """
+        print()
+        print(colorize("Welcome to the CAMARA management command line interface."))
+        print()
 
-        def __init__(self):
-            self.duration = 10
-            self.from_ip = "127.0.0.1"
-            self.to_ip = "0.0.0.0/0"
+        go_on = True
+        while go_on:
+            selection = input(Menu.PROMPT)
+            if selection in self.verbs:
+                try:
+                    go_on = self.verbs[selection]()
+                except Exception as exception:
+                    # be graceful with exceptions: Print them and don't explode the cli.
+                    print(f"{colorize('Exception caught', COLOR_ERROR)}: {exception}.")
+                    raise exception
+            else:
+                print("Unknown verb. Try 'help' to list all the supported _verbs_.")
 
-    def user_help():
+    def user_help(self):
         """Print help for all verbs."""
 
         print("Available verbs:")
-        for key in verbs.keys():
-            documentation = verbs[key].__doc__
+        for key in self.verbs.keys():
+            documentation = self.verbs[key].__doc__
             if documentation:
                 print(f"{colorize(f'▶ {key}')}: {documentation}")
             else:
@@ -74,92 +115,124 @@ def menu(client_id, client_secret):
 
         return True
 
-    def user_info():
+    def user_info(self):
         """Print information about configuration."""
 
-        try:
-            print(f"access_token: {camara.get_access_token()}")
-        except Exception:
-            print("no access_token set")
+        for key in variables(self.config):
+            value = getattr(self.config, key)
 
-        print(f"client_id: {camara.client_id}")
-        print(f"client_secret: {camara.client_secret}")
+            if type(value) is camara.EndpointConfig.EndpointConfig:
+                print(f"{key}: {[f'{x}: {getattr(value, x)}' for x in variables(value)]}")
+            else:
+                print(f"{key}: {value}")
 
-        print(f"last session: {qod.last_session}")
+        print(f"\nlast session: {self.client.qod.last_session}")
 
-        print(f"duration: {config.duration}")
-        print(f"from_ip: {config.from_ip}")
-        print(f"to_ip: {config.to_ip}")
-
-        user_time()
+        self.user_time()
 
         return True
 
-    def user_set_to():
+    def user_qod_set_to(self):
         """Set to ip address. The ip of the device the connection should start from. Alternative name: ue address."""
-        config.to_ip = input(f"ip (currently {config.to_ip})? ")
+        self.config.to_ip = input(f"ip (currently {self.config.to_ip})? ")
         return True
 
-    def user_set_from():
+    def user_set_from(self):
         """Set from ip address. The ip the device connects to. Alternative name: as address."""
-        config.from_ip = input(f"ip (currently {config.from_ip})? ")
+        self.config.from_ip = input(f"ip (currently {self.config.from_ip})? ")
         return True
 
-    def user_set_duration():
+    def user_qod_set_duration(self):
         """Set duration of newly created sessions in seconds."""
         try:
-            config.duration = int(input(f"duration (currently {config.duration})? "))
+            self.config.duration = int(input(f"duration (currently {self.config.duration})? "))
         except ValueError:
             print("Not a valid number, please retry.")
         return True
 
-    def user_create_token():
-        """Create a new access token. Needs client id and client secret for success."""
-        request, response = camara.create_access_token()
-        print_request_response(request, response)
-        return True
-
-    def create_session(qos: QualityOnDemand.Profile):
+    def create_session(self, qos: QualityOnDemand.Profile):
         """Create a qos session using one of the defined qos classes. Needs 'from', 'to', and 'duration' values."""
-        request, response = qod.create_session(
+        request, response = self.client.qod.create_session(
             qos=qos,
-            from_ip=config.from_ip,
-            to_ip=config.to_ip,
-            duration=config.duration
+            from_ip=self.config.from_ip,
+            to_ip=self.config.to_ip,
+            duration=self.config.duration
         )
 
-        print_request_response(request, response)
+        self.print_request_response(request, response)
         return True
 
-    def user_delete_session():
+    def user_delete_session(self):
         """Delete last session."""
-        if qod.last_session and 'id' in qod.last_session:
-            session_id = qod.last_session['id']
-            request, response = qod.delete_session(session_id)
-            print_request_response(request, response)
+        if self.client.qod.last_session and 'id' in self.client.qod.last_session:
+            session_id = self.client.qod.last_session['id']
+            request, response = self.client.qod.delete_session(session_id)
+            self.print_request_response(request, response)
         else:
             print("No session.")
         return True
 
-    def user_time():
+    def user_connectivity(self):
+        """Request connectivity information from the `from_ip`."""
+        request, response = self.client.connectivity.get_status(self.config.from_ip)
+        self.print_request_response(request, response)
+        return True
+
+    def user_location(self):
+        """Request location information from the `from_ip`."""
+        request, response = self.client.location.get_location(
+            self.config.from_ip,
+            self.config.latitude,
+            self.config.longitude,
+            self.config.accuracy,
+        )
+        self.print_request_response(request, response)
+        return True
+
+    def user_location_set_latitude(self):
+        """Set the latitude for the center."""
+        self.config.latitude = input(f"latitude (currently {self.config.latitude})? ")
+        return True
+
+    def user_location_set_longitude(self):
+        """Set the longitude for the center."""
+        self.config.longitude = input(f"longitude (currently {self.config.longitude})? ")
+        return True
+
+    def user_location_set_accuracy(self):
+        """Set the accuracy for the location to be considered inside."""
+        self.config.accuracy = input(f"accuracy (currently {self.config.accuracy})? ")
+        return True
+
+    def user_time(self):
         """Print seconds left on session and token."""
-        if qod.is_session_expired():
-            left = qod.session_seconds_remaining()
+        if self.client.qod.is_session_expired():
+            left = self.client.qod.session_seconds_remaining()
             print(f"{int(left)}s left in session duration.")
         else:
             print("No session.")
 
-        if camara.is_token_expired():
-            print("Token expired.")
-        else:
-            print(f"{int(camara.token_seconds_remaining())}s left in token duration.")
+        print()
+
+        for entry in [
+            ("qod", self.client.qod.token_provider),
+            ("con", self.client.connectivity.token_provider),
+            ("loc", self.client.location.token_provider)
+        ]:
+            name, provider = entry
+            if provider.is_token_expired():
+                print(f"{name} token expired.")
+            else:
+                print(f"{name} token has {int(provider.token_seconds_remaining())}s in duration left.")
 
         return True
 
+    @staticmethod
     def user_exit():
-        """Close this cli."""
+        """Close this menu."""
         return False
 
+    @staticmethod
     def print_request_response(request, response):
         """Helper function for printing the request and response, humanfriendly."""
         print(f"request: {request.body}")
@@ -169,66 +242,31 @@ def menu(client_id, client_secret):
             status = 'no-status'
         print(f"response: {status} {response}")
 
-    def create_session_creation_function(qod_for_lambda):
+    def create_session_creation_function(self, qod_for_lambda):
         """Create a function that calls the creation of a session. Used for user interaction."""
 
         def inline():
-            return create_session(qod_for_lambda)
+            return self.create_session(qod_for_lambda)
 
         inline.__doc__ = f"Create a qos session of type '{qod_for_lambda}'."
 
         return inline
 
-    verbs = {
-        'help': user_help,
-        'exit': user_exit,
-        'token': user_create_token,
-        'qod to': user_set_to,
-        'qod from': user_set_from,
-        'qod duration': user_set_duration,
-        'qod delete': user_delete_session,
-        'qod e': create_session_creation_function(QualityOnDemand.Profile.E),
-        'qod s': create_session_creation_function(QualityOnDemand.Profile.S),
-        'qod m': create_session_creation_function(QualityOnDemand.Profile.M),
-        'qod l': create_session_creation_function(QualityOnDemand.Profile.L),
-        'time': user_time,
-        'info': user_info,
-    }
-
-    camara = Camara(client_id=client_id, client_secret=client_secret)
-    qod = camara.qod
-
-    config = Config()
-
-    print()
-    print(colorize("Welcome to the CAMARA management command line interface."))
-    print()
-
-    # loop till either _exit_ is typed, an uncaught exception is thrown, or one of the _user*_ functions returns false
-    go_on = True
-    while go_on:
-        selection = input(PROMPT)
-        if selection in verbs:
-            try:
-                go_on = verbs[selection]()
-            except Exception as exception:
-                # be graceful with exceptions: Print them and don't explode the cli.
-                print(f"{colorize('Exception caught', ERROR_COLOR)}: {exception}.")
-        else:
-            print("Unknown verb. Try 'help' to list all the supported _verbs_.")
-
 
 # Are we in interactive / scripting mode?
 if __name__ == "__main__":
-    # CLI requested.
-    if CAMARA_CLIENT_ID_ENV in os.environ:
-        client_id = os.environ[CAMARA_CLIENT_ID_ENV]
-    else:
-        client_id = input(f"No '{CAMARA_CLIENT_ID_ENV}' environment variable set. Please specify by hand: ")
+    try:
+        c = camara.Config.from_file(".camara.config")
+    except FileNotFoundError:
+        print(colorize("Could not find configuration '.camara.conf'. Please add one.", COLOR_ERROR))
 
-    if CAMARA_CLIENT_SECRET_ENV in os.environ:
-        client_secret = os.environ[CAMARA_CLIENT_SECRET_ENV]
-    else:
-        client_secret = input(f"No '{CAMARA_CLIENT_SECRET_ENV}' environment variable set. Please specify by hand: ")
+    except json.decoder.JSONDecodeError as error:
+        print(colorize("Invalid camara configuration given.", COLOR_ERROR))
+        print(error)
 
-    menu(client_id, client_secret)
+    except TypeError as error:
+        print(colorize("Invalid configuration file.", COLOR_ERROR))
+        print(error)
+
+    else:
+        Menu(c).start()
