@@ -4,13 +4,15 @@ This is the entry point for the CAMARA APIs.
 
 It provides a cli when called as a script, and calls apis specified in [CAMARA](https://github.com/camraproject).
 """
-import os
+import sys
 import json
 
 import camara
 import camara.Config
 from camara import Camara, QualityOnDemand
-from camara.EndpointConfig import EndpointConfig
+
+## File to load at start for configuration of the cli
+CONFIGURATION_FILE = ".camara.config"
 
 # Set to 'None' to disable color. Otherwise, use an ANSI escape color code
 # number from here: https://en.wikipedia.org/wiki/ANSI_escape_code
@@ -126,19 +128,17 @@ class Menu:
             else:
                 print(f"{key}: {value}")
 
-        print(f"\nlast session: {self.client.qod.last_session}")
-
         self.user_time()
 
         return True
 
     def user_qod_set_to(self):
-        """Set to ip address. The ip of the device the connection should start from. Alternative name: ue address."""
+        """Set to ip address. The ip of the device the connection should start from."""
         self.config.to_ip = input(f"ip (currently {self.config.to_ip})? ")
         return True
 
     def user_set_from(self):
-        """Set from ip address. The ip the device connects to. Alternative name: as address."""
+        """Set from ip address. The ip the device connects to."""
         self.config.from_ip = input(f"ip (currently {self.config.from_ip})? ")
         return True
 
@@ -206,7 +206,7 @@ class Menu:
 
     def user_time(self):
         """Print seconds left on session and token."""
-        if self.client.qod.is_session_expired():
+        if self.client.qod.last_session:
             left = self.client.qod.session_seconds_remaining()
             print(f"{int(left)}s left in session duration.")
         else:
@@ -255,18 +255,46 @@ class Menu:
 
 # Are we in interactive / scripting mode?
 if __name__ == "__main__":
-    try:
-        c = camara.Config.from_file(".camara.config")
-    except FileNotFoundError:
-        print(colorize("Could not find configuration '.camara.conf'. Please add one.", COLOR_ERROR))
+    if '--help' in sys.argv or '-h' in sys.argv:
+        print(colorize("Camara CLI", COLOR_WARN))
 
-    except json.decoder.JSONDecodeError as error:
-        print(colorize("Invalid camara configuration given.", COLOR_ERROR))
-        print(error)
+        print("\n\nNo parameters needed, use the config file. Create one with '--generate-dummy-config' or '-g'.")
+    elif '--generate-dummy-config' in sys.argv or '-g' in sys.argv:
+        c = camara.Config(
+            auth_url="localhost:8000",
+            qod=camara.EndpointConfig.EndpointConfig(
+                client_id="",
+                client_secret="",
+                base_url=""
+            ),
+            connectivity=camara.EndpointConfig.EndpointConfig(
+                client_id="",
+                client_secret="",
+                base_url=""
+            ),
+            location=camara.EndpointConfig.EndpointConfig(
+                client_id="",
+                client_secret="",
+                base_url=""
+            ),
+            version=0
+        )
 
-    except TypeError as error:
-        print(colorize("Invalid configuration file.", COLOR_ERROR))
-        print(error)
-
+        open(CONFIGURATION_FILE, "w").write(json.dumps(c, default=vars, indent=2))
+        print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", COLOR_WARN))
     else:
-        Menu(c).start()
+        try:
+            c = camara.Config.from_file(CONFIGURATION_FILE)
+        except FileNotFoundError:
+            print(colorize("Could not find configuration '.camara.conf'.", COLOR_ERROR))
+
+        except json.decoder.JSONDecodeError as error:
+            print(colorize("Invalid camara configuration given.", COLOR_ERROR))
+            print(error)
+
+        except TypeError as error:
+            print(colorize("Invalid configuration file.", COLOR_ERROR))
+            print(error)
+
+        else:
+            Menu(c).start()
