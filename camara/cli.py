@@ -10,6 +10,7 @@ import json
 import camara
 import camara.Config
 from camara import Camara, QualityOnDemand
+from camara.Utils import hsv, rgb_to_termcolor
 
 # File to load at start for configuration of the cli
 CONFIGURATION_FILE = ".camara.config"
@@ -19,6 +20,9 @@ CONFIGURATION_FILE = ".camara.config"
 COLOR_INFO = 32
 COLOR_ERROR = 41
 COLOR_WARN = 43
+COLOR_RAINBOW = 38
+COLOR_EMPHASIZE = 1
+COLOR_RAINBOW_INVERTED = "38;5;0;48"
 
 
 def colorize(text, color=COLOR_INFO):
@@ -31,7 +35,14 @@ def colorize(text, color=COLOR_INFO):
     :param color: which color to be taken.
     :return: a colorized version of the input text.
     """
-    if color:
+    if color == COLOR_RAINBOW or color == COLOR_RAINBOW_INVERTED:
+        result = ""
+        for (index, char) in enumerate(text):
+            code = rgb_to_termcolor(hsv(index * 360.0 / len(text), 1.0, 1.0))
+            result += f"\033[{color};5;{code}m{char}"
+        result += f"\033[m"
+        return result
+    elif color:
         return f"\033[{color}m{text}\033[m"
     else:
         return text
@@ -50,7 +61,7 @@ class Menu:
     """
 
     # Prompt for the user: Whenever this CLI asks the user something, this prompt appears
-    PROMPT = f"{colorize('CAMARA')}> "
+    PROMPT = colorize('CAMARA> ', COLOR_RAINBOW)
 
     def __init__(self, config):
         self.config = config
@@ -92,7 +103,7 @@ class Menu:
         Start the menu, interacting with the user.
         """
         print()
-        print(colorize("Welcome to the CAMARA management command line interface."))
+        print(colorize("Welcome to the CAMARA management command line interface.", COLOR_RAINBOW))
         print()
 
         def call_verb(sel: str, param=None):
@@ -115,7 +126,7 @@ class Menu:
             except Exception as exception:
                 # be graceful with exceptions: Print them and don't explode the cli.
                 print(f"Unknown verb '{selection}'. Try 'help' to list all the supported _verbs_.")
-                print(f"{colorize('Exception caught', COLOR_ERROR)}: {exception}.")
+                print(f"{colorize('Exception caught', COLOR_RAINBOW_INVERTED)}: {exception.__doc__}.")
 
     def user_help(self):
         """Print help for all verbs."""
@@ -124,7 +135,7 @@ class Menu:
         for key in self.verbs.keys():
             documentation = self.verbs[key].__doc__
             if documentation:
-                print(f"{colorize(f'▶ {key}')}: {documentation}")
+                print(f"{colorize(f'▶ {key}', COLOR_EMPHASIZE)}: {documentation}")
             else:
                 print(colorize(f'▶ {key}'))
 
@@ -296,8 +307,7 @@ class Menu:
 # Are we in interactive / scripting mode?
 if __name__ == "__main__":
     if '--help' in sys.argv or '-h' in sys.argv:
-        print(colorize("Camara CLI", COLOR_WARN))
-
+        print(colorize("Camara CLI", COLOR_RAINBOW))
         print("\n\nNo parameters needed, use the config file. Create one with '--generate-dummy-config' or '-g'.")
     elif '--generate-dummy-config' in sys.argv or '-g' in sys.argv:
         c = camara.Config(
@@ -324,7 +334,7 @@ if __name__ == "__main__":
         print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", COLOR_WARN))
     else:
         try:
-            c = camara.Config.create_from_file(CONFIGURATION_FILE)
+            conf = camara.Config.create_from_file(CONFIGURATION_FILE)
         except FileNotFoundError:
             print(
                 colorize(
@@ -343,4 +353,4 @@ if __name__ == "__main__":
             print(error)
 
         else:
-            Menu(c).start()
+            Menu(conf).start()
