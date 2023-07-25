@@ -9,6 +9,14 @@ class Config:
     Used internally to store the configuration values for the sdk.
     """
 
+    @classmethod
+    def create_from_file(cls, filename):
+        config_json = json.loads(open(filename).read())
+        config_json['qod'] = EndpointConfig(**config_json['qod'])
+        config_json['connectivity'] = EndpointConfig(**config_json['connectivity'])
+        config_json['location'] = EndpointConfig(**config_json['location'])
+        return Config(**config_json)
+
     def __init__(
             self,
             auth_url: str,
@@ -23,10 +31,3 @@ class Config:
         self.connectivity: EndpointConfig = connectivity
         self.location: EndpointConfig = location
 
-    @classmethod
-    def from_file(cls, filename):
-        config_json = json.loads(open(filename).read())
-        config_json['qod'] = EndpointConfig(**config_json['qod'])
-        config_json['connectivity'] = EndpointConfig(**config_json['connectivity'])
-        config_json['location'] = EndpointConfig(**config_json['location'])
-        return Config(**config_json)

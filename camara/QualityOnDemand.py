@@ -5,6 +5,7 @@ from enum import Enum
 import requests
 
 from camara.EndpointConfig import EndpointConfig
+from camara.Utils import set_ue_id, remove_empty
 
 
 class QualityOnDemand:
@@ -34,7 +35,9 @@ class QualityOnDemand:
     def create_session(
             self,
             qos: Profile,
-            from_ip: str,
+            from_ipv4: str | None,
+            from_ipv6: str | None,
+            from_number: str | None,
             to_ip: str,
             duration: int,
     ):
@@ -42,30 +45,33 @@ class QualityOnDemand:
         Create a new qod session, prioritizing traffic.
 
         :param qos: QOD_E, QOD_S, QOD_M, QOD_L?
-        :param from_ip:
+        :param from_ipv4:
+        :param from_ipv6:
+        :param from_number:
         :param to_ip:
         :param duration:
         :return: request, response tuple for the actual rest call
         """
         self.token_provider.refresh_token()
 
-        payload = json.dumps({
+        payload = {
             "duration": duration,
             "ueId": {
-                "ipv4addr": from_ip
             },
             "asId": {
                 "ipv4addr": to_ip
             },
             "qos": qos.value
-        })
+        }
+
+        set_ue_id(payload, from_ipv4, from_ipv6, from_number)
 
         headers = self.token_provider.get_auth_headers({'Content-Type': 'application/json'})
         response = requests.request(
             "POST",
             self.base_url,
             headers=headers,
-            data=payload
+            data=json.dumps(remove_empty(payload))
         )
 
         if response.ok:

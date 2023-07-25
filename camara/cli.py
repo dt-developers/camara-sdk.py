@@ -11,7 +11,7 @@ import camara
 import camara.Config
 from camara import Camara, QualityOnDemand
 
-## File to load at start for configuration of the cli
+# File to load at start for configuration of the cli
 CONFIGURATION_FILE = ".camara.config"
 
 # Set to 'None' to disable color. Otherwise, use an ANSI escape color code
@@ -55,7 +55,9 @@ class Menu:
     def __init__(self, config):
         self.config = config
         self.config.to_ip = "0.0.0.0/8"
-        self.config.from_ip = "127.0.0.1"
+        self.config.from_ipv4 = None
+        self.config.from_ipv6 = None
+        self.config.from_number = None
         self.config.duration = 10
         self.config.latitude = None
         self.config.longitude = None
@@ -64,7 +66,9 @@ class Menu:
         self.verbs = {
             'help': self.user_help,
             'exit': self.user_exit,
-            'from': self.user_set_from,
+            'from ipv4': self.user_set_from_ipv4,
+            'from ipv6': self.user_set_from_ipv6,
+            'from number': self.user_set_from_number,
             'time': self.user_time,
             'info': self.user_info,
             'con': self.user_connectivity,
@@ -91,18 +95,27 @@ class Menu:
         print(colorize("Welcome to the CAMARA management command line interface."))
         print()
 
+        def call_verb(sel: str, param=None):
+            if param is None:
+                return self.verbs[sel]()
+            else:
+                return self.verbs[sel](param)
+
         go_on = True
         while go_on:
             selection = input(Menu.PROMPT)
-            if selection in self.verbs:
-                try:
-                    go_on = self.verbs[selection]()
-                except Exception as exception:
-                    # be graceful with exceptions: Print them and don't explode the cli.
-                    print(f"{colorize('Exception caught', COLOR_ERROR)}: {exception}.")
-                    raise exception
-            else:
-                print("Unknown verb. Try 'help' to list all the supported _verbs_.")
+            try:
+                if selection in self.verbs:
+                    go_on = call_verb(selection)
+                else:
+                    *s, parameter = selection.split(" ")
+                    s = " ".join(s)
+                    go_on = call_verb(s, parameter)
+
+            except Exception as exception:
+                # be graceful with exceptions: Print them and don't explode the cli.
+                print(f"Unknown verb '{selection}'. Try 'help' to list all the supported _verbs_.")
+                print(f"{colorize('Exception caught', COLOR_ERROR)}: {exception}.")
 
     def user_help(self):
         """Print help for all verbs."""
@@ -132,29 +145,54 @@ class Menu:
 
         return True
 
-    def user_qod_set_to(self):
+    @staticmethod
+    def request_input(old, new):
+        if new is None:
+            result = input(f"(old:{old})> ")
+        else:
+            result = new
+
+        result_string = str(result)
+        if len(result_string) <= 0 \
+                or result_string.lower() == "none" \
+                or result_string == "\'\'" \
+                or result_string == "\"\"":
+            result = None
+
+        return result
+
+    def user_qod_set_to(self, value=None):
         """Set to ip address. The ip of the device the connection should start from."""
-        self.config.to_ip = input(f"ip (currently {self.config.to_ip})? ")
+        self.config.to_ip = self.request_input(self.config.to_ip, value)
         return True
 
-    def user_set_from(self):
-        """Set from ip address. The ip the device connects to."""
-        self.config.from_ip = input(f"ip (currently {self.config.from_ip})? ")
+    def user_set_from_ipv4(self, value=None):
+        """Set ipv4 address it should originate from. The ip the device connects to."""
+        self.config.from_ipv4 = self.request_input(self.config.from_ipv4, value)
         return True
 
-    def user_qod_set_duration(self):
+    def user_set_from_ipv6(self, value=None):
+        """Set ipv6 address the phone is using. The ip the device connects to."""
+        self.config.from_ipv6 = self.request_input(self.config.from_ipv6, value)
+        return True
+
+    def user_set_from_number(self, value=None):
+        """Set phone number to be used. The ip the device connects to."""
+        self.config.from_number = self.request_input(self.config.from_number, value)
+        return True
+
+    def user_qod_set_duration(self, value=None):
         """Set duration of newly created sessions in seconds."""
-        try:
-            self.config.duration = int(input(f"duration (currently {self.config.duration})? "))
-        except ValueError:
-            print("Not a valid number, please retry.")
+        self.config.duration = self.request_input(self.config.duration, value)
         return True
 
     def create_session(self, qos: QualityOnDemand.Profile):
-        """Create a qos session using one of the defined qos classes. Needs 'from', 'to', and 'duration' values."""
+        """Create a qos session using one of the defined qos classes. Needs 'from_XXX', 'to', and 'duration' values."""
         request, response = self.client.qod.create_session(
             qos=qos,
-            from_ip=self.config.from_ip,
+            from_ipv4=self.config.from_ipv4,
+            from_ipv6=self.config.from_ipv6,
+            from_number=self.config.from_number,
             to_ip=self.config.to_ip,
             duration=self.config.duration
         )
@@ -174,14 +212,16 @@ class Menu:
 
     def user_connectivity(self):
         """Request connectivity information from the `from_ip`."""
-        request, response = self.client.connectivity.get_status(self.config.from_ip)
+        request, response = self.client.connectivity.get_status(self.config.from_ipv6, self.config.from_number)
         self.print_request_response(request, response)
         return True
 
     def user_location(self):
         """Request location information from the `from_ip`."""
         request, response = self.client.location.get_location(
-            self.config.from_ip,
+            self.config.from_ipv4,
+            self.config.from_ipv6,
+            self.config.from_number,
             self.config.latitude,
             self.config.longitude,
             self.config.accuracy,
@@ -189,19 +229,19 @@ class Menu:
         self.print_request_response(request, response)
         return True
 
-    def user_location_set_latitude(self):
+    def user_location_set_latitude(self, value=None):
         """Set the latitude for the center."""
-        self.config.latitude = input(f"latitude (currently {self.config.latitude})? ")
+        self.config.latitude = self.request_input(self.config.latitude, value)
         return True
 
-    def user_location_set_longitude(self):
+    def user_location_set_longitude(self, value=None):
         """Set the longitude for the center."""
-        self.config.longitude = input(f"longitude (currently {self.config.longitude})? ")
+        self.config.longitude = self.request_input(self.config.longitude, value)
         return True
 
-    def user_location_set_accuracy(self):
+    def user_location_set_accuracy(self, value=None):
         """Set the accuracy for the location to be considered inside."""
-        self.config.accuracy = input(f"accuracy (currently {self.config.accuracy})? ")
+        self.config.accuracy = self.request_input(self.config.accuracy, value)
         return True
 
     def user_time(self):
@@ -284,12 +324,18 @@ if __name__ == "__main__":
         print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", COLOR_WARN))
     else:
         try:
-            c = camara.Config.from_file(CONFIGURATION_FILE)
+            c = camara.Config.create_from_file(CONFIGURATION_FILE)
         except FileNotFoundError:
-            print(colorize("Could not find configuration '.camara.conf'.", COLOR_ERROR))
+            print(
+                colorize(
+                    "Could not find configuration '.camara.conf'.\n\n"
+                    "Please create one with '--generate-dummy-config'.",
+                    COLOR_ERROR
+                )
+            )
 
         except json.decoder.JSONDecodeError as error:
-            print(colorize("Invalid camara configuration given.", COLOR_ERROR))
+            print(colorize("Invalid configuration given.", COLOR_ERROR))
             print(error)
 
         except TypeError as error:
