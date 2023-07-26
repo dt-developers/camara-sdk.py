@@ -6,7 +6,7 @@ It provides a cli when called as a script, and calls apis specified in [CAMARA](
 """
 import sys
 import json
-
+import traceback
 import camara
 import camara.Config
 from camara import Camara, QualityOnDemand
@@ -125,8 +125,9 @@ class Menu:
 
             except Exception as exception:
                 # be graceful with exceptions: Print them and don't explode the cli.
-                print(f"Unknown verb '{selection}'. Try 'help' to list all the supported _verbs_.")
-                print(f"{colorize('Exception caught', COLOR_RAINBOW_INVERTED)}: {exception.__doc__}.")
+                print(f"Error with verb '{selection}'. Try 'help' to list all the supported _verbs_.")
+                print(f"{colorize('Exception caught', COLOR_RAINBOW_INVERTED)}:")
+                traceback.print_exception(exception)
 
     def user_help(self):
         """Print help for all verbs."""
