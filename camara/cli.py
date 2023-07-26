@@ -77,23 +77,23 @@ class Menu:
         self.verbs = {
             'help': self.user_help,
             'exit': self.user_exit,
-            'from ipv4': self.user_set_from_ipv4,
-            'from ipv6': self.user_set_from_ipv6,
-            'from number': self.user_set_from_number,
+            'set ipv4': self.user_set_from_ipv4,
+            'set ipv6': self.user_set_from_ipv6,
+            'set number': self.user_set_from_number,
             'time': self.user_time,
             'info': self.user_info,
             'con': self.user_connectivity,
             'loc': self.user_location,
-            'loc lat': self.user_location_set_latitude,
-            'loc lon': self.user_location_set_longitude,
-            'loc acc': self.user_location_set_accuracy,
+            'set lat': self.user_location_set_latitude,
+            'set lon': self.user_location_set_longitude,
+            'set acc': self.user_location_set_accuracy,
             'qod delete': self.user_delete_session,
             'qod e': self.create_session_creation_function(QualityOnDemand.Profile.E),
             'qod s': self.create_session_creation_function(QualityOnDemand.Profile.S),
             'qod m': self.create_session_creation_function(QualityOnDemand.Profile.M),
             'qod l': self.create_session_creation_function(QualityOnDemand.Profile.L),
-            'qod to': self.user_qod_set_to,
-            'qod duration': self.user_qod_set_duration,
+            'set to': self.user_qod_set_to,
+            'set duration': self.user_qod_set_duration,
         }
 
         self.client = Camara(config)
@@ -132,7 +132,7 @@ class Menu:
         """Print help for all verbs."""
 
         print("Available verbs:")
-        for key in self.verbs.keys():
+        for key in sorted(self.verbs.keys()):
             documentation = self.verbs[key].__doc__
             if documentation:
                 print(f"{colorize(f'▶ {key}', COLOR_EMPHASIZE)}: {documentation}")
