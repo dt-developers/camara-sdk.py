@@ -69,10 +69,11 @@ class Menu:
         self.config.from_ipv4 = None
         self.config.from_ipv6 = None
         self.config.from_number = None
+        self.config.profile = QualityOnDemand.Profile.E
         self.config.duration = 10
-        self.config.latitude = None
-        self.config.longitude = None
-        self.config.accuracy = None
+        self.config.latitude = 52.49628951726823
+        self.config.longitude = 13.358005137756487
+        self.config.accuracy = 10
 
         self.verbs = {
             'help': self.user_help,
@@ -82,16 +83,14 @@ class Menu:
             'set number': self.user_set_from_number,
             'time': self.user_time,
             'info': self.user_info,
-            'con': self.user_connectivity,
-            'loc': self.user_location,
+            'api con': self.user_connectivity,
+            'api loc': self.user_location,
             'set lat': self.user_location_set_latitude,
             'set lon': self.user_location_set_longitude,
             'set acc': self.user_location_set_accuracy,
-            'qod delete': self.user_delete_session,
-            'qod e': self.create_session_creation_function(QualityOnDemand.Profile.E),
-            'qod s': self.create_session_creation_function(QualityOnDemand.Profile.S),
-            'qod m': self.create_session_creation_function(QualityOnDemand.Profile.M),
-            'qod l': self.create_session_creation_function(QualityOnDemand.Profile.L),
+            'api qod delete': self.user_delete_session,
+            'api qod': self.create_session,
+            'set prio': self.user_set_profile,
             'set to': self.user_qod_set_to,
             'set duration': self.user_qod_set_duration,
         }
@@ -188,6 +187,27 @@ class Menu:
         self.config.from_ipv6 = self.request_input(self.config.from_ipv6, value)
         return True
 
+    def user_set_profile(self, value=None):
+        """Set qod prioritization profile S,M,L,E."""
+        self.config.profile = self.request_input(self.config.profile, value)
+        if self.config.profile.lower() in ["s", "m", "l", "e"]:
+            if self.config.profile.lower() == "s":
+                self.config.profile = QualityOnDemand.Profile.S
+
+            elif self.config.profile.lower() == "m":
+                self.config.profile = QualityOnDemand.Profile.M
+
+            elif self.config.profile.lower() == "l":
+                self.config.profile = QualityOnDemand.Profile.L
+
+            elif self.config.profile.lower() == "e":
+                self.config.profile = QualityOnDemand.Profile.E
+        else:
+            print(colorize("Warning: No s,m,l, or e given. Defaulting to 'E'.", COLOR_WARN))
+            self.config.profile = QualityOnDemand.Profile.E
+
+        return True
+
     def user_set_from_number(self, value=None):
         """Set phone number to be used. The ip the device connects to."""
         self.config.from_number = self.request_input(self.config.from_number, value)
@@ -198,10 +218,10 @@ class Menu:
         self.config.duration = self.request_input(self.config.duration, value)
         return True
 
-    def create_session(self, qos: QualityOnDemand.Profile):
+    def create_session(self):
         """Create a qos session using one of the defined qos classes. Needs 'from_XXX', 'to', and 'duration' values."""
         request, response = self.client.qod.create_session(
-            qos=qos,
+            qos=self.config.profile,
             from_ipv4=self.config.from_ipv4,
             from_ipv6=self.config.from_ipv6,
             from_number=self.config.from_number,
@@ -293,16 +313,6 @@ class Menu:
         else:
             status = 'no-status'
         print(f"response: {status} {response}")
-
-    def create_session_creation_function(self, qod_for_lambda):
-        """Create a function that calls the creation of a session. Used for user interaction."""
-
-        def inline():
-            return self.create_session(qod_for_lambda)
-
-        inline.__doc__ = f"Create a qos session of type '{qod_for_lambda}'."
-
-        return inline
 
 
 # Are we in interactive / scripting mode?
