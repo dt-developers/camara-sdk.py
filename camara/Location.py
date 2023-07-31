@@ -49,4 +49,4 @@ class Location:
             data=json.dumps(remove_empty(payload))
         )
 
-        return response.request, response.json()
+        return response.request, response

@@ -78,7 +78,7 @@ class QualityOnDemand:
             self.last_session = response.json()
             self.last_session['expires_at'] = datetime.datetime.now() + datetime.timedelta(0, duration)
 
-        return response.request, response.json()
+        return response.request, response
 
     def delete_session(self, session_id: str):
         """

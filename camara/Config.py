@@ -24,10 +24,11 @@ class Config:
             connectivity: EndpointConfig,
             location: EndpointConfig,
             version: int = 1,
+            verbose: bool = False,
     ):
         self.version: int = version
         self.auth_url: str = auth_url
         self.qod: EndpointConfig = qod
         self.connectivity: EndpointConfig = connectivity
         self.location: EndpointConfig = location
-
+        self.verbose: bool = verbose

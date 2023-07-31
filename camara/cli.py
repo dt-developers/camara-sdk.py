@@ -10,46 +10,11 @@ import traceback
 import camara
 import camara.Config
 from camara import Camara, QualityOnDemand
-from camara.Utils import hsv, rgb_to_termcolor
+from camara.Utils import latitude_for_km, longitude_for_km, print_request_response, colorize, variables
+from camara.Utils import TermColor
 
 # File to load at start for configuration of the cli
 CONFIGURATION_FILE = ".camara.config"
-
-# Set to 'None' to disable color. Otherwise, use an ANSI escape color code
-# number from here: https://en.wikipedia.org/wiki/ANSI_escape_code
-COLOR_INFO = 32
-COLOR_ERROR = 41
-COLOR_WARN = 43
-COLOR_RAINBOW = 38
-COLOR_EMPHASIZE = 1
-COLOR_RAINBOW_INVERTED = "38;5;0;48"
-
-
-def colorize(text, color=COLOR_INFO):
-    """
-    Take the text and colorize it with one color.
-
-    This function can be used to colorize a piece of text for console output.
-
-    :param text: which text to colorize
-    :param color: which color to be taken.
-    :return: a colorized version of the input text.
-    """
-    if color == COLOR_RAINBOW or color == COLOR_RAINBOW_INVERTED:
-        result = ""
-        for (index, char) in enumerate(text):
-            code = rgb_to_termcolor(hsv(index * 360.0 / len(text), 1.0, 1.0))
-            result += f"\033[{color};5;{code}m{char}"
-        result += f"\033[m"
-        return result
-    elif color:
-        return f"\033[{color}m{text}\033[m"
-    else:
-        return text
-
-
-def variables(obj):
-    return list(filter(lambda x: not x.startswith("__") and not callable(x), dir(obj)))
 
 
 class Menu:
@@ -61,7 +26,7 @@ class Menu:
     """
 
     # Prompt for the user: Whenever this CLI asks the user something, this prompt appears
-    PROMPT = colorize('CAMARA> ', COLOR_RAINBOW)
+    PROMPT = colorize('CAMARA> ', TermColor.COLOR_RAINBOW)
 
     def __init__(self, config):
         self.config = config
@@ -81,6 +46,7 @@ class Menu:
             'set ipv4': self.user_set_from_ipv4,
             'set ipv6': self.user_set_from_ipv6,
             'set number': self.user_set_from_number,
+            'set verbose': self.user_set_verbose,
             'time': self.user_time,
             'info': self.user_info,
             'api con': self.user_connectivity,
@@ -102,7 +68,7 @@ class Menu:
         Start the menu, interacting with the user.
         """
         print()
-        print(colorize("Welcome to the CAMARA management command line interface.", COLOR_RAINBOW))
+        print(colorize("Welcome to the CAMARA management command line interface.", TermColor.COLOR_RAINBOW))
         print()
 
         def call_verb(sel: str, param=None):
@@ -125,7 +91,7 @@ class Menu:
             except Exception as exception:
                 # be graceful with exceptions: Print them and don't explode the cli.
                 print(f"Error with verb '{selection}'. Try 'help' to list all the supported _verbs_.")
-                print(f"{colorize('Exception caught', COLOR_RAINBOW_INVERTED)}:")
+                print(f"{colorize('Exception caught', TermColor.COLOR_RAINBOW_INVERTED)}:")
                 traceback.print_exception(exception)
 
     def user_help(self):
@@ -135,7 +101,7 @@ class Menu:
         for key in sorted(self.verbs.keys()):
             documentation = self.verbs[key].__doc__
             if documentation:
-                print(f"{colorize(f'▶ {key}', COLOR_EMPHASIZE)}: {documentation}")
+                print(f"{colorize(f'▶ {key}', TermColor.COLOR_EMPHASIZE)}: {documentation}")
             else:
                 print(colorize(f'▶ {key}'))
 
@@ -203,7 +169,7 @@ class Menu:
             elif self.config.profile.lower() == "e":
                 self.config.profile = QualityOnDemand.Profile.E
         else:
-            print(colorize("Warning: No s,m,l, or e given. Defaulting to 'E'.", COLOR_WARN))
+            print(colorize("Warning: No s,m,l, or e given. Defaulting to 'E'.", TermColor.COLOR_WARN))
             self.config.profile = QualityOnDemand.Profile.E
 
         return True
@@ -211,6 +177,12 @@ class Menu:
     def user_set_from_number(self, value=None):
         """Set phone number to be used. The ip the device connects to."""
         self.config.from_number = self.request_input(self.config.from_number, value)
+        return True
+
+    def user_set_verbose(self, value=None):
+        """Set or unset verbose output (True, False)."""
+        self.config.verbose = self.request_input(self.config.verbose, value)
+        self.config.verbose = self.config.verbose.lower() == "true"
         return True
 
     def user_qod_set_duration(self, value=None):
@@ -229,7 +201,10 @@ class Menu:
             duration=self.config.duration
         )
 
-        self.print_request_response(request, response)
+        if self.config.verbose:
+            print_request_response(request, response)
+        else:
+            print(response.ok)
         return True
 
     def user_delete_session(self):
@@ -237,7 +212,10 @@ class Menu:
         if self.client.qod.last_session and 'id' in self.client.qod.last_session:
             session_id = self.client.qod.last_session['id']
             request, response = self.client.qod.delete_session(session_id)
-            self.print_request_response(request, response)
+            if self.config.verbose:
+                print_request_response(request, response)
+            else:
+                print(response.ok)
         else:
             print("No session.")
         return True
@@ -245,7 +223,10 @@ class Menu:
     def user_connectivity(self):
         """Request connectivity information from the `from_ip`."""
         request, response = self.client.connectivity.get_status(self.config.from_ipv6, self.config.from_number)
-        self.print_request_response(request, response)
+        if self.config.verbose:
+            print_request_response(request, response)
+        else:
+            print(response.ok)
         return True
 
     def user_location(self):
@@ -304,21 +285,11 @@ class Menu:
         """Close this menu."""
         return False
 
-    @staticmethod
-    def print_request_response(request, response):
-        """Helper function for printing the request and response, humanfriendly."""
-        print(f"request: {request.body}")
-        if 'status' in response:
-            status = response['status']
-        else:
-            status = 'no-status'
-        print(f"response: {status} {response}")
-
 
 # Are we in interactive / scripting mode?
 if __name__ == "__main__":
     if '--help' in sys.argv or '-h' in sys.argv:
-        print(colorize("Camara CLI", COLOR_RAINBOW))
+        print(colorize("Camara CLI", TermColor.COLOR_RAINBOW))
         print("\n\nNo parameters needed, use the config file. Create one with '--generate-dummy-config' or '-g'.")
     elif '--generate-dummy-config' in sys.argv or '-g' in sys.argv:
         c = camara.Config(
@@ -342,7 +313,7 @@ if __name__ == "__main__":
         )
 
         open(CONFIGURATION_FILE, "w").write(json.dumps(c, default=vars, indent=2))
-        print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", COLOR_WARN))
+        print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", TermColor.COLOR_WARN))
     else:
         try:
             conf = camara.Config.create_from_file(CONFIGURATION_FILE)
@@ -351,16 +322,16 @@ if __name__ == "__main__":
                 colorize(
                     "Could not find configuration '.camara.conf'.\n\n"
                     "Please create one with '--generate-dummy-config'.",
-                    COLOR_ERROR
+                    TermColor.COLOR_ERROR
                 )
             )
 
         except json.decoder.JSONDecodeError as error:
-            print(colorize("Invalid configuration given.", COLOR_ERROR))
+            print(colorize("Invalid configuration given.", TermColor.COLOR_ERROR))
             print(error)
 
         except TypeError as error:
-            print(colorize("Invalid configuration file.", COLOR_ERROR))
+            print(colorize("Invalid configuration file.", TermColor.COLOR_ERROR))
             print(error)
 
         else:

@@ -53,7 +53,7 @@ class TokenProvider:
             self.token = None
             self.auth_responses += response
 
-        return response.request, response.json()
+        return response.request, response
 
     def refresh_token(self):
         """
