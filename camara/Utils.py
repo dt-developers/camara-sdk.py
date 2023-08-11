@@ -2,6 +2,7 @@ import math
 import enum
 import json
 
+from requests.exceptions import JSONDecodeError
 
 
 def set_ue_id(payload, from_ipv4, from_ipv6, from_number):
@@ -92,30 +93,49 @@ def latitude_for_km(latitude, longitude, accuracy):
     return 1 / (111.320 * math.cos(math.radians(latitude)) * accuracy)
 
 
-def print_request_response(request, response):
+def print_request_response(request, response, verbose):
     """Helper function for printing the request and response, humanfriendly."""
 
-    headers = ""
-    for k in request.headers:
-        headers += f"  --header \"{k}: {ellipsize(request.headers[k])}\" \\\n"
+    if not verbose:
+        if response.ok:
+            status = colorize('Success', TermColor.COLOR_SUCCESS)
+        else:
+            status = colorize('Failure', TermColor.COLOR_ERROR)
 
-    print(f"{colorize('request')}\n"
-          f"curl \\\n  --request {request.method} \\\n"
-          f"{headers}  -d '{request.body}\" \\\n"
-          f"  {request.url}'")
+        print(f"{status}: {response.json()}")
+    else:
+        headers = ""
+        for key in request.headers:
+            value = ellipsize(request.headers[key]) if key.lower().find('auth') >= 0 else request.headers[key]
+            headers += f"  --header \"{key}: {value}\" \\\n"
 
-    headers = ""
-    for k in response.headers:
-        headers += f"  {k}: {ellipsize(response.headers[k])}\n"
+        curl = f"curl \\\n  --request {request.method} \\\n" \
+               f"{headers}"
 
-    if len(headers) > 0:
-        headers = f"\nHeaders\n{headers}"
+        if request.body:
+            curl += f"  -d '{request.body}'\" \\\n"
 
-    status = response.status_code
-    body = response.json()
-    body = json.dumps(body, indent=2)
+        curl += f"  '{request.url}'"
 
-    print(f"\n{colorize('response')}\n{status}\n{body}{headers}")
+        print(f"{colorize('request')}\n {curl}")
+
+        headers = ""
+        for key in response.headers:
+            value = ellipsize(response.headers[key]) if key.lower().find('auth') >= 0 else response.headers[key]
+            headers += f"  {key}: {value}\n"
+
+        if len(headers) > 0:
+            headers = f"\nHeaders\n{headers}"
+
+        status = response.status_code
+        try:
+            body = response.json()
+            body = json.dumps(body, indent=2)
+        except JSONDecodeError:
+            body = ""
+
+        response_color = TermColor.COLOR_SUCCESS if response.ok else TermColor.COLOR_ERROR
+        print(f"\n{colorize('response', response_color)}\n{status}\n{body}{headers}")
 
 
 class TermColor(enum.Enum):
@@ -124,6 +144,7 @@ class TermColor(enum.Enum):
     """
     COLOR_INFO = 32
     COLOR_ERROR = 41
+    COLOR_SUCCESS = 42
     COLOR_WARN = 43
     COLOR_RAINBOW = 38
     COLOR_EMPHASIZE = 1

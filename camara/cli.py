@@ -51,6 +51,7 @@ class Menu:
             'info': self.user_info,
             'api con': self.user_connectivity,
             'api loc': self.user_location,
+            'xxx': self.user_experiment,
             'set lat': self.user_location_set_latitude,
             'set lon': self.user_location_set_longitude,
             'set acc': self.user_location_set_accuracy,
@@ -91,8 +92,11 @@ class Menu:
             except Exception as exception:
                 # be graceful with exceptions: Print them and don't explode the cli.
                 print(f"Error with verb '{selection}'. Try 'help' to list all the supported _verbs_.")
-                print(f"{colorize('Exception caught', TermColor.COLOR_RAINBOW_INVERTED)}:")
-                traceback.print_exception(exception)
+                print(f"{colorize('Exception caught', TermColor.COLOR_RAINBOW_INVERTED)}: "
+                      f"{type(exception)} ({exception})")
+
+                if self.config.verbose:
+                    traceback.print_exception(exception)
 
     def user_help(self):
         """Print help for all verbs."""
@@ -187,7 +191,7 @@ class Menu:
 
     def user_qod_set_duration(self, value=None):
         """Set duration of newly created sessions in seconds."""
-        self.config.duration = self.request_input(self.config.duration, value)
+        self.config.duration = int(self.request_input(self.config.duration, value))
         return True
 
     def create_session(self):
@@ -201,10 +205,7 @@ class Menu:
             duration=self.config.duration
         )
 
-        if self.config.verbose:
-            print_request_response(request, response)
-        else:
-            print(response.ok)
+        print_request_response(request, response, self.config.verbose)
         return True
 
     def user_delete_session(self):
@@ -212,10 +213,7 @@ class Menu:
         if self.client.qod.last_session and 'id' in self.client.qod.last_session:
             session_id = self.client.qod.last_session['id']
             request, response = self.client.qod.delete_session(session_id)
-            if self.config.verbose:
-                print_request_response(request, response)
-            else:
-                print(response.ok)
+            print_request_response(request, response, self.config.verbose)
         else:
             print("No session.")
         return True
@@ -223,10 +221,7 @@ class Menu:
     def user_connectivity(self):
         """Request connectivity information from the `from_ip`."""
         request, response = self.client.connectivity.get_status(self.config.from_ipv6, self.config.from_number)
-        if self.config.verbose:
-            print_request_response(request, response)
-        else:
-            print(response.ok)
+        print_request_response(request, response, self.config.verbose)
         return True
 
     def user_location(self):
@@ -239,7 +234,70 @@ class Menu:
             self.config.longitude,
             self.config.accuracy,
         )
-        self.print_request_response(request, response)
+        print_request_response(request, response, self.config.verbose)
+
+        return True
+
+    def user_experiment(self):
+        """."""
+        request, response = self.client.location.get_location(
+            self.config.from_ipv4,
+            self.config.from_ipv6,
+            self.config.from_number,
+            self.config.latitude,
+            self.config.longitude,
+            self.config.accuracy,
+        )
+        print_request_response(request, response, self.config.verbose)
+
+        accuracy = float(self.config.accuracy)
+        latitude = float(self.config.latitude)
+        longitude = float(self.config.longitude)
+        while response.json()["verificationResult"] == 'true':
+            print(
+                colorize(
+                    f"Found you within {accuracy}km accuracy. Digging deeper.",
+                    TermColor.COLOR_RAINBOW_INVERTED
+                )
+            )
+
+            accuracy *= 0.75
+            for (x, y) in (
+                    (-1, -1), (-1, 0), (-1, 1),
+                    (0, -1), (0, 0), (0, 1),
+                    (1, -1), (1, 0), (1, 1),
+                    (-0.5, -0.5), (-0.5, 0.5),
+                    (0.5, -0.5), (0.5, 0.5),
+            ):
+                request, response = self.client.location.get_location(
+                    self.config.from_ipv4,
+                    self.config.from_ipv6,
+                    self.config.from_number,
+                    latitude + x * latitude_for_km(latitude, longitude, accuracy),
+                    longitude + y * longitude_for_km(longitude, longitude, accuracy),
+                    accuracy,
+                )
+
+                if self.config.verbose:
+                    print_request_response(request, response, self.config.verbose)
+
+                if not response.ok or response.json()["verificationResult"] == 'true':
+                    break
+
+            if response.json()["verificationResult"] == 'true':
+                latitude = latitude + x * latitude_for_km(latitude, longitude, accuracy)
+                longitude = longitude + y * longitude_for_km(latitude, longitude, accuracy)
+
+                print(f"You are somewhere here: {latitude} x {longitude} @ {accuracy}km")
+
+        else:
+            print(
+                colorize(
+                    f"Couldn't find you, increase {accuracy}km accuracy or initial position.",
+                    TermColor.COLOR_RAINBOW_INVERTED
+                )
+            )
+
         return True
 
     def user_location_set_latitude(self, value=None):
@@ -261,7 +319,10 @@ class Menu:
         """Print seconds left on session and token."""
         if self.client.qod.last_session:
             left = self.client.qod.session_seconds_remaining()
-            print(f"{int(left)}s left in session duration.")
+            if left >= 0:
+                print(f"{int(left)}s left in session duration.")
+            else:
+                print(f"The session is done.")
         else:
             print("No session.")
 
