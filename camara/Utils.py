@@ -3,7 +3,8 @@ import enum
 import json
 
 
-def set_ue_id(payload, from_ipv4, from_ipv6, from_number, ipv4key='ipv4addr', ipv6key='ipv6addr', msisdnkey='msisdn'):
+
+def set_ue_id(payload, from_ipv4, from_ipv6, from_number):
     """
     Set the ue id and delete all others.
     """
