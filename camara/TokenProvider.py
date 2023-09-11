@@ -76,7 +76,7 @@ class TokenProvider:
 
         :return: a created access_token or None
         """
-        if "access_token" in self.token:
+        if self.token and "access_token" in self.token:
             return self.token["access_token"]
         else:
             return None

@@ -9,7 +9,10 @@ import json
 import traceback
 import camara
 import camara.Config
-from camara import Camara, QualityOnDemand
+from camara.Config import create_from_file
+from camara import Camara
+from camara.QualityOnDemand import Profile
+from camara.QualityOnDemand import normalize_profile
 from camara.Utils import latitude_for_km, longitude_for_km, print_request_response, colorize, variables
 from camara.Utils import TermColor
 
@@ -30,15 +33,6 @@ class Menu:
 
     def __init__(self, config):
         self.config = config
-        self.config.to_ip = "0.0.0.0/8"
-        self.config.from_ipv4 = None
-        self.config.from_ipv6 = None
-        self.config.from_number = None
-        self.config.profile = QualityOnDemand.Profile.E
-        self.config.duration = 10
-        self.config.latitude = 52.49628951726823
-        self.config.longitude = 13.358005137756487
-        self.config.accuracy = 10
 
         self.verbs = {
             'help': self.user_help,
@@ -48,6 +42,7 @@ class Menu:
             'set number': self.user_set_from_number,
             'set verbose': self.user_set_verbose,
             'time': self.user_time,
+            'tokens': self.user_tokens,
             'info': self.user_info,
             'api con': self.user_connectivity,
             'api loc': self.user_location,
@@ -56,8 +51,9 @@ class Menu:
             'set lon': self.user_location_set_longitude,
             'set acc': self.user_location_set_accuracy,
             'api qod delete': self.user_delete_session,
-            'api qod': self.create_session,
-            'set prio': self.user_set_profile,
+            'api qod get': self.user_get_session,
+            'api qod': self.user_create_session,
+            'set profile': self.user_set_profile,
             'set to': self.user_qod_set_to,
             'set duration': self.user_qod_set_duration,
         }
@@ -159,22 +155,11 @@ class Menu:
 
     def user_set_profile(self, value=None):
         """Set qod prioritization profile S,M,L,E."""
-        self.config.profile = self.request_input(self.config.profile, value)
-        if self.config.profile.lower() in ["s", "m", "l", "e"]:
-            if self.config.profile.lower() == "s":
-                self.config.profile = QualityOnDemand.Profile.S
+        self.config.profile = normalize_profile(self.request_input(self.config.profile, value))
 
-            elif self.config.profile.lower() == "m":
-                self.config.profile = QualityOnDemand.Profile.M
-
-            elif self.config.profile.lower() == "l":
-                self.config.profile = QualityOnDemand.Profile.L
-
-            elif self.config.profile.lower() == "e":
-                self.config.profile = QualityOnDemand.Profile.E
-        else:
-            print(colorize("Warning: No s,m,l, or e given. Defaulting to 'E'.", TermColor.COLOR_WARN))
-            self.config.profile = QualityOnDemand.Profile.E
+        if self.config.profile is None:
+            print(colorize("Warning: No 's','m','l', or 'e' profile given. Defaulting to 'e'.", TermColor.COLOR_WARN))
+            self.config.profile = Profile.E
 
         return True
 
@@ -194,7 +179,7 @@ class Menu:
         self.config.duration = int(self.request_input(self.config.duration, value))
         return True
 
-    def create_session(self):
+    def user_create_session(self):
         """Create a qos session using one of the defined qos classes. Needs 'from_XXX', 'to', and 'duration' values."""
         request, response = self.client.qod.create_session(
             qos=self.config.profile,
@@ -203,6 +188,21 @@ class Menu:
             from_number=self.config.from_number,
             to_ip=self.config.to_ip,
             duration=self.config.duration
+        )
+
+        print_request_response(request, response, self.config.verbose)
+        return True
+
+    def user_get_session(self):
+        """Get the session created."""
+
+        if self.client.qod.last_session and 'id' in self.client.qod.last_session:
+            session = self.client.qod.last_session['id']
+        else:
+            session = ''
+
+        request, response = self.client.qod.get_session(
+            session_id=session
         )
 
         print_request_response(request, response, self.config.verbose)
@@ -341,6 +341,26 @@ class Menu:
 
         return True
 
+    def user_tokens(self):
+        """Print tokens."""
+
+        for entry in [
+            ("qod", self.client.qod.token_provider),
+            ("con", self.client.connectivity.token_provider),
+            ("loc", self.client.location.token_provider)
+        ]:
+            name, provider = entry
+            if provider.is_token_expired():
+                print(f"{name} token expired.\n"
+                      f"It was '{provider.token}'.")
+            else:
+                print(
+                    f"{name} token has {int(provider.token_seconds_remaining())}s in duration left.\n"
+                    f"Use it as '{provider.token}'."
+                )
+
+        return True
+
     @staticmethod
     def user_exit():
         """Close this menu."""
@@ -355,21 +375,6 @@ if __name__ == "__main__":
     elif '--generate-dummy-config' in sys.argv or '-g' in sys.argv:
         c = camara.Config(
             auth_url="localhost:8000",
-            qod=camara.EndpointConfig.EndpointConfig(
-                client_id="",
-                client_secret="",
-                base_url=""
-            ),
-            connectivity=camara.EndpointConfig.EndpointConfig(
-                client_id="",
-                client_secret="",
-                base_url=""
-            ),
-            location=camara.EndpointConfig.EndpointConfig(
-                client_id="",
-                client_secret="",
-                base_url=""
-            ),
             version=0
         )
 
@@ -377,7 +382,7 @@ if __name__ == "__main__":
         print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", TermColor.COLOR_WARN))
     else:
         try:
-            conf = camara.Config.create_from_file(CONFIGURATION_FILE)
+            conf = create_from_file(CONFIGURATION_FILE)
         except FileNotFoundError:
             print(
                 colorize(

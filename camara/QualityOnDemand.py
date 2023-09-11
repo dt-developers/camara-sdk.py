@@ -8,6 +8,16 @@ from camara.EndpointConfig import EndpointConfig
 from camara.Utils import set_ue_id, remove_empty
 
 
+class Profile(Enum):
+    """
+    Enumeration holding all valid values for QoD profiles.
+    """
+    E = "QOS_E"
+    S = "QOS_S"
+    M = "QOS_M"
+    L = "QOS_L"
+
+
 class QualityOnDemand:
     """
     Specific CAMARA API: Quality on Demand
@@ -15,15 +25,6 @@ class QualityOnDemand:
     This set of rest operations control the quality on demand aspects of a network channel. It prioritizes network
     traffic based on a specific qod profile.
     """
-
-    class Profile(Enum):
-        """
-        Enumeration holding all valid values for QoD profiles.
-        """
-        E = "QOS_E"
-        S = "QOS_S"
-        M = "QOS_M"
-        L = "QOS_L"
 
     def __init__(self, token_provider, config: EndpointConfig):
         self.token_provider = token_provider
@@ -105,9 +106,7 @@ class QualityOnDemand:
         url = f"{self.base_url}/{session_id}"
         response = requests.request("GET", url, headers=self.token_provider.get_auth_headers())
 
-        request = response.request
-        response = response.json()
-        return request, response
+        return response.request, response
 
     def is_session_expired(self):
         """
@@ -130,3 +129,20 @@ class QualityOnDemand:
             return (self.last_session['expires_at'] - datetime.datetime.now()).total_seconds()
         else:
             return 0
+
+
+def normalize_profile(profile):
+    if profile is not None and profile.lower() in ["s", "m", "l", "e"]:
+        if profile.lower() == "s":
+            return Profile.S
+
+        elif profile.lower() == "m":
+            return Profile.M
+
+        elif profile.lower() == "l":
+            return Profile.L
+
+        elif profile.lower() == "e":
+            return Profile.E
+    else:
+        return None

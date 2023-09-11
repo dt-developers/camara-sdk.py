@@ -113,16 +113,17 @@ def print_request_response(request, response, verbose):
                f"{headers}"
 
         if request.body:
-            curl += f"  -d '{request.body}'\" \\\n"
+            curl += f"  -d '{request.body}' \\\n"
 
         curl += f"  '{request.url}'"
 
         print(f"{colorize('request')}\n {curl}")
 
         headers = ""
-        for key in response.headers:
-            value = ellipsize(response.headers[key]) if key.lower().find('auth') >= 0 else response.headers[key]
-            headers += f"  {key}: {value}\n"
+        if response.headers:
+            for key in response.headers:
+                value = ellipsize(response.headers[key]) if key.lower().find('auth') >= 0 else response.headers[key]
+                headers += f"  {key}: {value}\n"
 
         if len(headers) > 0:
             headers = f"\nHeaders\n{headers}"
@@ -135,7 +136,7 @@ def print_request_response(request, response, verbose):
             body = ""
 
         response_color = TermColor.COLOR_SUCCESS if response.ok else TermColor.COLOR_ERROR
-        print(f"\n{colorize('response', response_color)}\n{status}\n{body}{headers}")
+        print(f"\n{colorize('response', response_color)}\n{status}\n{headers}\n{body}")
 
 
 class TermColor(enum.Enum):
@@ -183,5 +184,5 @@ def variables(obj):
     return list(filter(lambda x: not x.startswith("__") and not callable(x), dir(obj)))
 
 
-def ellipsize(text: str, max_len: int = 42):
+def ellipsize(text: str, max_len: int = 100):
     return (text[:max_len] + '…') if len(text) > max_len else text
