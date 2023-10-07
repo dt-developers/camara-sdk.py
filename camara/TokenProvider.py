@@ -2,6 +2,8 @@ import datetime
 
 import requests
 
+from camara.Utils import print_request_response
+
 
 class TokenProvider:
     """
@@ -11,7 +13,7 @@ class TokenProvider:
     a completely new one.
     """
 
-    def __init__(self, client_id, client_secret, auth_url):
+    def __init__(self, client_id, client_secret, auth_url, verbose):
         """
         Initialize a token provider
 
@@ -26,6 +28,7 @@ class TokenProvider:
         self.auth_url = auth_url
         self.token = None
         self.auth_responses = []
+        self.verbose = verbose
 
     def create_access_token(self):
         """
@@ -41,6 +44,8 @@ class TokenProvider:
         headers = {'Content-Type': 'application/x-www-form-urlencoded'}
 
         response = requests.request("POST", self.auth_url, headers=headers, data=payload)
+
+        print_request_response(response.request, response, self.verbose)
 
         if response.status_code == 200:
             token_response = response.json()
