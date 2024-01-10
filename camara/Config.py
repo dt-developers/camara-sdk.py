@@ -55,9 +55,13 @@ def create_from_file(filename):
 
     if 'connectivity' in config_json:
         config_json['connectivity'] = EndpointConfig(**config_json['connectivity'])
+    else:
+        config_json['connectivity'] = None
 
     if 'location' in config_json:
         config_json['location'] = EndpointConfig(**config_json['location'])
+    else:
+        config_json['location'] = None
 
     if 'profile' in config_json:
         config_json['profile'] = normalize_profile(config_json['profile'])
@@ -71,4 +75,5 @@ def create_from_file(filename):
                 )
             )
             config_json['profile'] = Profile.E
+
     return Config(**config_json)

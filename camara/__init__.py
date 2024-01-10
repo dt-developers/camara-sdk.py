@@ -34,16 +34,28 @@ class Camara:
         self.config: Config = config
         self.token: dict | None = None
         self.authentication_responses: list = []
-        self.qod: QualityOnDemand = QualityOnDemand(
-            TokenProvider(config.qod.client_id, config.qod.client_secret, config.auth_url, config.verbose),
-            config.qod
-        )
-        self.connectivity: Connectivity = Connectivity(
-            TokenProvider(config.connectivity.client_id, config.connectivity.client_secret,
-                          config.auth_url, config.verbose),
-            config.connectivity
-        )
-        self.location: Location = Location(
-            TokenProvider(config.location.client_id, config.location.client_secret, config.auth_url, config.verbose),
-            config.location
-        )
+        if config.qod:
+            self.qod: QualityOnDemand = QualityOnDemand(
+                TokenProvider(config.qod.client_id, config.qod.client_secret, config.auth_url, config.verbose),
+                config.qod
+            )
+        else:
+            self.qod = None
+
+        if config.connectivity:
+            self.connectivity: Connectivity = Connectivity(
+                TokenProvider(config.connectivity.client_id, config.connectivity.client_secret,
+                              config.auth_url, config.verbose),
+                config.connectivity
+            )
+        else:
+            self.connectivity = None
+
+        if config.location:
+            self.location: Location = Location(
+                TokenProvider(config.location.client_id, config.location.client_secret, config.auth_url,
+                              config.verbose),
+                config.location
+            )
+        else:
+            self.location = None

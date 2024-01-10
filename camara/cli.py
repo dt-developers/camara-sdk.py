@@ -181,6 +181,10 @@ class Menu:
 
     def user_create_session(self):
         """Create a qos session using one of the defined qos classes. Needs 'from_XXX', 'to', and 'duration' values."""
+        if not self.client.qod:
+            print(colorize("Api not configured.", TermColor.COLOR_WARN))
+            return True
+
         request, response = self.client.qod.create_session(
             qos=self.config.profile,
             from_ipv4=self.config.from_ipv4,
@@ -196,6 +200,10 @@ class Menu:
     def user_get_session(self):
         """Get the session created."""
 
+        if not self.client.qod:
+            print(colorize("Api not configured.", TermColor.COLOR_WARN))
+            return True
+
         if self.client.qod.last_session and 'id' in self.client.qod.last_session:
             session = self.client.qod.last_session['id']
         else:
@@ -210,6 +218,10 @@ class Menu:
 
     def user_delete_session(self):
         """Delete last session."""
+        if not self.client.qod:
+            print(colorize("Api not configured.", TermColor.COLOR_WARN))
+            return True
+
         if self.client.qod.last_session and 'id' in self.client.qod.last_session:
             session_id = self.client.qod.last_session['id']
             request, response = self.client.qod.delete_session(session_id)
@@ -220,12 +232,20 @@ class Menu:
 
     def user_connectivity(self):
         """Request connectivity information from the `from_ip`."""
+        if not self.client.connectivity:
+            print(colorize("Api not configured.", TermColor.COLOR_WARN))
+            return True
+
         request, response = self.client.connectivity.get_status(self.config.from_ipv6, self.config.from_number)
         print_request_response(request, response, self.config.verbose)
         return True
 
     def user_location(self):
         """Request location information from the `from_ip`."""
+        if not self.client.location:
+            print(colorize("Api not configured.", TermColor.COLOR_WARN))
+            return True
+
         request, response = self.client.location.get_location(
             self.config.from_ipv4,
             self.config.from_ipv6,
