@@ -165,7 +165,7 @@ class Menu:
 
     def user_set_from_number(self, value=None):
         """Set phone number to be used. The ip the device connects to."""
-        self.config.from_number = self.request_input(self.config.from_number, value)
+        self.config.from_number = self.request_input(self.config.from_number, value).replace(" ","")
         return True
 
     def user_set_verbose(self, value=None):
