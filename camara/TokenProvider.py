@@ -77,7 +77,7 @@ class TokenProvider:
         """
         Returns a potentially set token.
 
-        If the tokoen is already created or refreshed, it will get returned. Otherwise a None will get returned.
+        If the token is already created or refreshed, it will get returned. Otherwise a None will get returned.
 
         :return: a created access_token or None
         """

@@ -5,6 +5,8 @@ from camara.Utils import colorize
 from camara.Utils import TermColor
 import json
 
+# File to load at start for configuration of the cli
+DEFAULT_CONFIGURATION_FILE = ".camara.config"
 
 class Config:
     """
@@ -48,7 +50,7 @@ class Config:
         self.accuracy: int = accuracy
 
 
-def create_from_file(filename):
+def read_from_file(filename: str = DEFAULT_CONFIGURATION_FILE):
     config_json = json.loads(open(filename).read())
     if 'qod' in config_json:
         config_json['qod'] = EndpointConfig(**config_json['qod'])

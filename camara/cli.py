@@ -9,7 +9,7 @@ import json
 import traceback
 import camara
 import camara.Config
-from camara.Config import create_from_file
+from camara.Config import read_from_file
 from camara import Camara
 from camara.QualityOnDemand import Profile
 from camara.QualityOnDemand import normalize_profile
@@ -165,7 +165,7 @@ class Menu:
 
     def user_set_from_number(self, value=None):
         """Set phone number to be used. The ip the device connects to."""
-        self.config.from_number = self.request_input(self.config.from_number, value).replace(" ","")
+        self.config.from_number = self.request_input(self.config.from_number, value).replace(" ", "")
         return True
 
     def user_set_verbose(self, value=None):
@@ -402,7 +402,7 @@ if __name__ == "__main__":
         print(colorize(f"Saved configuration in {CONFIGURATION_FILE}.", TermColor.COLOR_WARN))
     else:
         try:
-            conf = create_from_file(CONFIGURATION_FILE)
+            conf = read_from_file()
         except FileNotFoundError:
             print(
                 colorize(
