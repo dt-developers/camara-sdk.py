@@ -41,11 +41,11 @@ For simple use, a CLI was created, it makes it easy to create authorization toke
 Usage
 -----
 
-To run the cli, use `python3 cli.py` or directly execute the script like `./cli.py`. Once the cli is started typing `help` will show the list of available _verbs_. Entering those will change configuration or actually call the apis.
+To run the cli, use `python -m camara.cli`. Once the cli is started typing `help` will show the list of available _verbs_. Entering those will change configuration or actually call the apis.
 
-Please set `CAMARA_CLIENT_ID` and `CAMARA_CLIENT_SECRET` environment variables to authenticate towards the Telekom Camara API gateway. Otherwise you'll get asked at startup of the _cli_.
+Please use a configuration file as created by `python -m camara.cli --generate-dummy-config`.
 
-Using the `qod e` _verb_ will call the qod session creation operation with the priority of `e`. When no token is created this verb will also request a token. Once the token is expired, also it will get renewed.
+Using the `api qod` _verb_ will call the qod session creation operation with the priority of `e`. When no token is created this verb will also request a token. Once the token is expired, also it will get renewed.
 
 Using the _info_ verb will present the times left on the last session and the token.
 
